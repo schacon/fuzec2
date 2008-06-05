@@ -1,0 +1,17 @@
+#! /usr/bin/env ruby
+
+require 'lib/fuzEc2'
+
+options = {
+  :amis => { 32 => "ami-1da54174", 64 => "ami-64a6420d" },
+  :access_key => 'XXXXXXXXXXXXXXXXXXXX',
+  :secret_key => 'XXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXX',
+  :proxy => 
+    { :ip => 'NNN.NNN.NNN.NNN',
+      :stats_user => 'user',
+      :stats_pwd => 'user' },
+  :rails => { :path => '/opt/fuzed/test/app' },
+}
+
+FuzEc2.new(ARGV, options).go
+
