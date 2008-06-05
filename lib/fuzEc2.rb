@@ -200,7 +200,7 @@ defaults
 listen webfarm *:80
        mode http
        stats enable
-       stats auth testu:testu
+       stats auth #{@options[:proxy][:stats_user]}:#{@options[:proxy][:stats_pwd]}
        balance roundrobin
        cookie JSESSIONID prefix
        option httpclose
@@ -224,8 +224,8 @@ listen webfarm *:80
     data = node_data
     node_info = data[node]
     ssh_options = {}
-    ssh_options[:keys] = ['/Users/schacon/.ssh/id_rsa-gsg-keypair'] 
-    ssh_options[:verbose] = :debug
+    ssh_options[:keys] = [@options[:keypair]] 
+    #ssh_options[:verbose] = :debug
     
     addr = node_info.dnsName
     if @data[node]['role'] == 'master'
@@ -242,8 +242,9 @@ listen webfarm *:80
   def spin
     if !@args[1]
       puts "available types:"
+      puts "INST TYPE   RAM(GB)        CU      DISK      ARCH     COST/H"
       image_sizes.each do |size|
-        puts size.inspect
+        puts size.map { |v| v.to_s.rjust(9) }.join(' ')
       end
     else
       type = @args[1] || 'm1.small'
@@ -252,7 +253,7 @@ listen webfarm *:80
       image = image_sizes.assoc(type)
       img_id = @options[:ami][image[4]]
       @amazon.run_instances( :image_id => img_id, 
-                      :key_name => 'gsg-keypair',
+                      :key_name => @options[:keyname],
                       :instance_type => type )
       puts "Instance #{img_id} started"
       list_nodes

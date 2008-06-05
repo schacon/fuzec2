@@ -3,6 +3,8 @@
 require 'lib/fuzEc2'
 
 options = {
+  :keypair => '/Users/schacon/.ssh/id_rsa-gsg-keypair',
+  :keyname => 'gsg-keypair',
   :amis => { 32 => "ami-1da54174", 64 => "ami-64a6420d" },
   :access_key => 'XXXXXXXXXXXXXXXXXXXX',
   :secret_key => 'XXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXX',
