@@ -169,11 +169,16 @@ class FuzEc2
     puts command2 = ['/usr/bin/haproxy', '-f', '/etc/haproxy.conf', '-D'].join(' ')
 
     on_node(node) do |ssh|
-      puts result = ssh.exec!(command1)
-      puts result = ssh.exec!(command2)
+      ssh.exec!(kill_command('haproxy')) # kill haproxy - i realize this is stupid, but it's just a demo...
+      ssh.exec!(command1) # write config file
+      ssh.exec!(command2) # start haproxy
     end
   end
 
+  def kill_command(match)
+    "ps ax | grep #{match} | awk '{print $1}' | xargs kill -9"
+  end
+  
   def haproxy_config
     conf = "global
         log 127.0.0.1   local0
