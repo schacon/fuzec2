@@ -1,5 +1,4 @@
 #! /usr/bin/env ruby
-
 require 'lib/fuzEc2'
 
 options = {
@@ -16,4 +15,3 @@ options = {
 }
 
 FuzEc2.new(ARGV, options).go
-

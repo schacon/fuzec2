@@ -1,0 +1,95 @@
+FuzEc2 is a dumb helper script to automate all the stuff I was doing
+manually for testing stacks of EC2 instances running a webapp on Fuzed.
+
+Usage is thus:
+
+$ cp fuze.example fuze
+$ vim fuze (change all the configs)
+$ ./fuze 
+
+This will list the things you can do with the script
+
+$ ./fuze spin
+
+This will show you all the instance types you can spin, eg:
+
+available types:
+INST TYPE   RAM(GB)        CU      DISK      ARCH     COST/H
+ m1.small       1.7         1       160        32       0.1
+ m1.large       7.5         4       850        64       0.4
+m1.xlarge      15.0         8      1690        64       0.8
+c1.medium       1.7         5       350        32       0.2
+c1.xlarge       7.0        20      1690        64       0.8
+
+Then you can start spinning instances via:
+
+$ ./fuze spin m1.small
+
+To see which instances you have running, type:
+
+$ ./fuze list
+
+    i-213ff448	domU-12-31-39-00-C0-02	ec2-75-101-131-181.compute-1.amazonaws.com	m1.small	running
+    i-1839f271	domU-12-31-39-00-5D-C6	ec2-67-202-36-240.compute-1.amazonaws.com	  m1.small	running
+    i-a633f8cf	domU-12-31-39-00-5D-87	ec2-75-101-225-2.compute-1.amazonaws.com	  m1.small	running
+    i-b839f2d1	domU-12-31-39-00-E8-C3	ec2-75-101-131-128.compute-1.amazonaws.com	m1.small	running
+    i-5732f93e	domU-12-31-39-00-8D-91	ec2-75-101-205-249.compute-1.amazonaws.com	c1.xlarge	running
+    i-0b33f862	domU-12-31-39-00-8D-71	ec2-75-101-200-57.compute-1.amazonaws.com	  c1.xlarge	running
+    i-c833f8a1	domU-12-31-39-00-95-11	ec2-75-101-213-58.compute-1.amazonaws.com	  c1.xlarge	running
+    i-163cf77f	domU-12-31-39-00-22-21	ec2-67-202-40-157.compute-1.amazonaws.com	  m1.xlarge	running
+    i-3b3df652	domU-12-31-39-00-C0-B7	ec2-75-101-254-200.compute-1.amazonaws.com	m1.small	running
+
+To make those instances into certain Fuzed node types, do thusly:
+
+$ ./fuze attach_master i-b839f2d1    # creates a master node - do this first
+$ ./fuze attach_faceplate i-1839f271 # creates a faceplate
+$ ./fuze attach_frontend i-213ff448  # creates an haproxy node - do this after you add faceplates
+$ ./fuze attach_rails i-5732f93e     # creates a rails node
+
+Then you'll probably want to assign your frontend a static IP:
+$ ec2-allocate-address # to get a static IP if you don't have one
+$ ec2-associate-address YOUR.NEW.IP.ADDY -i i-213ff448   # assign your static IP to your haproxy node
+
+To add more rails backend nodes, just do:
+
+$ ./fuze spin c1.xlarge   # wait a minute for it to spin
+$ ./fuze list             # grab the new i-xxxxxx instance id
+$ ./fuze attach_rails i-xxxxxx
+
+That's it - your capacity goes up.  For faceplates, you do this:
+
+$ ./fuze spin m1.small    # wait a minute for it to spin
+$ ./fuze list             # grab the new i-xxxxxx instance id
+$ ./fuze attach_faceplate i-xxxxxx
+$ ./fuze attach_frontend i-213ff448  # re-run this to make haproxy rewrite and restart 
+
+You can see the stats on your haproxy node by visiting here:
+
+http://your-frontend-address/haproxy?stats
+
+And then enter the username/password you put in your config file to get access.
+
+
+Here is an example of one big-ass cluster:
+
+$ ./fuze list 
+
+frontend    i-213ff448	domU-12-31-39-00-C0-02	ec2-75-101-131-181.compute-1.amazonaws.com	m1.small	running
+faceplate   i-1839f271	domU-12-31-39-00-5D-C6	ec2-67-202-36-240.compute-1.amazonaws.com	m1.small	running
+faceplate   i-a633f8cf	domU-12-31-39-00-5D-87	ec2-75-101-225-2.compute-1.amazonaws.com	m1.small	running
+faceplate   i-4a33f823	domU-12-31-39-00-5D-D4	ec2-67-202-52-242.compute-1.amazonaws.com	m1.small	running
+master      i-b839f2d1	domU-12-31-39-00-E8-C3	ec2-75-101-131-128.compute-1.amazonaws.com	m1.small	running
+rails       i-5732f93e	domU-12-31-39-00-8D-91	ec2-75-101-205-249.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-0b33f862	domU-12-31-39-00-8D-71	ec2-75-101-200-57.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-c833f8a1	domU-12-31-39-00-95-11	ec2-75-101-213-58.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-4f33f826	domU-12-31-39-00-90-21	ec2-75-101-199-42.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-0933f860	domU-12-31-39-00-8D-B1	ec2-75-101-206-32.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-cd33f8a4	domU-12-31-39-00-91-61	ec2-75-101-205-227.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-3633f85f	domU-12-31-39-00-8C-71	ec2-75-101-195-69.compute-1.amazonaws.com	c1.xlarge	running
+rails       i-163cf77f	domU-12-31-39-00-22-21	ec2-67-202-40-157.compute-1.amazonaws.com	m1.xlarge	running
+rails       i-3b3df652	domU-12-31-39-00-C0-B7	ec2-75-101-254-200.compute-1.amazonaws.com	m1.small	running
+
+Watch out, though - that particular cluster costs about $6.40/hour to run 
+- thats $150 a day, so don't forget about it.  It's unlikely you'll need it, 
+even with really crappy Rails apps, that should process a freak-load of requests
+per second, it represents about 350 Rails handlers and something like 60 cores.
