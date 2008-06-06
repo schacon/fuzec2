@@ -43,11 +43,25 @@ class FuzEc2
   end
   
   def list_nodes
+    puts "domain : .compute-1.amazonaws.com"
+    puts
+    if @args[1] == 'loop'
+      while true
+        do_list_nodes
+        puts
+        sleep 5
+      end
+    else
+      do_list_nodes
+    end
+  end
+  
+  def do_list_nodes
     data = node_data
     data.each do |key, inst|
       role = @data[inst.instanceId]['role'] rescue ''
-      puts [role.ljust(20), inst.instanceId, 
-        trunc(inst.privateDnsName,22), inst.dnsName,
+      puts [role.ljust(10), inst.instanceId, 
+        trunc(inst.privateDnsName,22), trunc(inst.dnsName, 18),
         inst.instanceType, inst.instanceState.name].join("\t")
     end
   end
@@ -66,8 +80,10 @@ class FuzEc2
     @data[node]['role'] = 'master'
     puts "attach #{node}"
   
+    puts command = [FUZED_BIN, 'start', '-d', '-n', "master@#{master_name}"].join(' ')
+
     on_node(node) do |ssh|
-      command = [FUZED_BIN, '-d', '-n', "master@#{master_name}"].join(' ')
+      ssh.exec!(kill_command('erlang')) 
       result = ssh.exec!(command)
     end
     # attach 
@@ -125,6 +141,7 @@ class FuzEc2
         '-n', 'f8080@' + node_info.privateDnsName].join(' ')
 
     on_node(node) do |ssh|
+      ssh.exec!(kill_command('erlang')) 
       puts result = ssh.exec!(command)
     end
   end
@@ -150,6 +167,7 @@ class FuzEc2
         '-c', num, '-n', 'node@' + node_info.privateDnsName].join(' ')
 
     on_node(node) do |ssh|
+      ssh.exec!(kill_command('erlang')) 
       puts result = ssh.exec!(command)
     end
   end
@@ -228,11 +246,11 @@ listen webfarm *:80
     #ssh_options[:verbose] = :debug
     
     addr = node_info.dnsName
-    if @data[node]['role'] == 'master'
-      addr = @options[:master][:name]
-    elsif @data[node]['role'] == 'proxy'
-      addr = @options[:proxy][:name]
-    end
+    #if @data[node]['role'] == 'master'
+    #  addr = @options[:master][:name]
+    #elsif @data[node]['role'] == 'proxy'
+    #  addr = @options[:proxy][:name]
+    #end
     
     Net::SSH.start(addr, "root", ssh_options) do |ssh|
       yield ssh
@@ -251,7 +269,7 @@ listen webfarm *:80
       count = @args[2] || 1
     
       image = image_sizes.assoc(type)
-      img_id = @options[:ami][image[4]]
+      img_id = @options[:amis][image[4]]
       @amazon.run_instances( :image_id => img_id, 
                       :key_name => @options[:keyname],
                       :instance_type => type )
